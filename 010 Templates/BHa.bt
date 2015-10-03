@@ -1,0 +1,58 @@
+//--------------------------------------
+//--- 010 Editor v6.0.2 Binary Template
+//
+// File:
+// Author:
+// Revision:
+// Purpose:
+//--------------------------------------
+LittleEndian();
+
+struct FloatVect
+{
+    float x;
+    float y;
+    float z;
+};
+
+struct Quat
+{
+    float x;
+    float y;
+    float z;
+    float w;
+};
+
+struct RotPosData
+{
+    struct Quat rotation;
+    struct FloatVect position;
+    float data;
+};
+
+struct RotPosDataKey
+{
+    float time;
+    struct RotPosData data;
+};
+
+struct Chunk
+{
+    uint32 dataLength;
+    uint16 chunkId;
+    uint16 numChildren;
+
+    if (chunkId == 7)
+    {
+        uint32 numElements;
+        // Data is offset values??
+        struct RotPosDataKey keys[numElements];
+    }
+
+    struct Chunk children[numChildren] <optimize=false>;
+};
+
+struct
+{
+    struct Chunk c0;
+} file;

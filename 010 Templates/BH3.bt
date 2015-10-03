@@ -1,0 +1,102 @@
+//--------------------------------------
+//--- 010 Editor v6.0.2 Binary Template
+//
+// File:
+// Author:
+// Revision:
+// Purpose:
+//--------------------------------------
+LittleEndian();
+
+struct FloatVect
+{
+    float x;
+    float y;
+    float z;
+};
+
+struct HFloatVect
+{
+    float x;
+    float y;
+    float z;
+    float one;
+};
+
+struct Quat
+{
+    float x;
+    float y;
+    float z;
+    float w;
+};
+
+struct Triangle
+{
+    uint16 z;
+    uint16 y;
+    uint16 x;
+};
+
+struct UV
+{
+    float U;
+    float V;
+};
+
+struct Chunk
+{
+    uint32 dataLength;
+    uint16 chunkId;
+    uint16 numChildren;
+
+    if (chunkId == 2)
+    {
+        uint32 numElements;
+        // homogeneous vertex vector??
+        // vertexPoint3 * inverse(bone.Transform)
+        // based on rigid physique bone offset
+        struct HFloatVect vertices[numElements];
+    }
+    else if (chunkId == 3)
+    {
+        uint32 numElements;
+        // something to do with normals
+        struct FloatVect data1[numElements];
+        float data2[numElements];
+    }
+    else if (chunkId == 4)
+    {
+        uint32 numElements;
+        // 1.0 - v to match 3ds Max
+        struct UV data[numElements];
+    }
+    else if (chunkId == 5)
+    {
+        uint32 numElements;
+        // z,y,x to match up with 3ds Max
+        struct Triangle faces[numElements/3];
+    }
+    else if (chunkId == 7)
+    {
+        uint32 vertexIndexStart;
+        uint32 affectedVertexCount;
+        uint32 nameLength;
+        char name[nameLength];
+        // local transfrom
+        struct Quat rotation;
+        struct FloatVect position;
+        float data;
+    }
+    else if (chunkId == 8)
+    {
+        uint32 numElements;
+    }
+
+    struct Chunk children[numChildren] <optimize=false>;
+};
+
+struct
+{
+    struct Chunk c0;
+} file;
