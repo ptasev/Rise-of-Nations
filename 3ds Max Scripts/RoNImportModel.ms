@@ -142,23 +142,23 @@
 		meshop.setMapSupport mainObject 1 true
 		setMesh mainObject tverts:texVerts
 		
-		--set smoothing group of all faces to 1 to get one normal per vertex
-		for face = 1 to mainObject.numfaces do setFaceSmoothGroup mainObject face 1
-		--set normals via edit normals modifier
-		select mainObject
-		addmodifier mainObject (Edit_Normals ()) ui:off
-		mainObject.Edit_Normals.MakeExplicit selection:#{1..normals.count}
-		EN_convertVS = mainObject.Edit_Normals.ConvertVertexSelection
-		EN_setNormal = mainObject.Edit_Normals.SetNormal
-		normID = #{}
-		--apply normals
-		for v = 1 to normals.count do
-		(
-			free normID
-			EN_convertVS #{v} &normID
-			for id in normID do EN_setNormal id normals[v]
-		)
-		collapseStack mainObject
+-- 		--set smoothing group of all faces to 1 to get one normal per vertex
+-- 		for face = 1 to mainObject.numfaces do setFaceSmoothGroup mainObject face 1
+-- 		--set normals via edit normals modifier
+-- 		select mainObject
+-- 		addmodifier mainObject (Edit_Normals ()) ui:off
+-- 		mainObject.Edit_Normals.MakeExplicit selection:#{1..normals.count}
+-- 		EN_convertVS = mainObject.Edit_Normals.ConvertVertexSelection
+-- 		EN_setNormal = mainObject.Edit_Normals.SetNormal
+-- 		normID = #{}
+-- 		--apply normals
+-- 		for v = 1 to normals.count do
+-- 		(
+-- 			free normID
+-- 			EN_convertVS #{v} &normID
+-- 			for id in normID do EN_setNormal id normals[v]
+-- 		)
+-- 		collapseStack mainObject
 		
 		-- skin the mesh
 		select mainObject
