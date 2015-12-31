@@ -61,8 +61,9 @@ struct Chunk
     else if (chunkId == 3)
     {
         uint32 numElements;
-        // something to do with normals
-        struct FloatVect data1[numElements];
+        // normal * inverse(transpose(inverse(bone.Transform)))
+        struct FloatVect normals[numElements];
+        // no idea
         float data2[numElements];
     }
     else if (chunkId == 4)

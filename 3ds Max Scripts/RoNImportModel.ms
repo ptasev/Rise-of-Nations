@@ -1,6 +1,6 @@
 -- Ris of Nations Model Importer
 -- By Petar Tasev
--- Version 1.0.2015.0825
+-- Version 1.0.2015.1230
 (
 	fn readStr binstr =
 	(
@@ -50,7 +50,7 @@
 						readFloat binStr
 					)
 				)
-				3: -- Unknown, Normals??
+				3: -- Normals, and Unknown
 				(
 					local numElements = readLong binStr
 					for ni = 1 to numElements do
@@ -62,7 +62,7 @@
 						readFloat binStr
 					)
 				)
-				4: -- UVs??
+				4: -- UVs
 				(
 					local numElements = readLong binStr
 					for tv = 1 to numElements do
@@ -100,8 +100,8 @@
 					local boneName = readStr binStr
 					local boneRot = inverse(quat (readFloat binStr) (readFloat binStr) (readFloat binStr) (readFloat binStr))
 					local bonePos = [(readFloat binStr),(readFloat binStr),(readFloat binStr)]
-				    local boneTm = transmatrix bonePos
-					boneTm = (boneRot as matrix3) * boneTm
+				    --local boneTm = transmatrix bonePos
+					--boneTm = (boneRot as matrix3) * boneTm
 					readFloat binStr
 					local boneDum = dummy name:boneName rotation:boneRot position:bonePos boxsize:[1,1,1]
 					--local boneDum = BoneSys.createBone boneTm.row4 (boneTm.row4+boneTm.row1) boneTm.row3
@@ -113,6 +113,11 @@
 						boneDum.parent = parent
 						boneDum.transform *= parent.transform
 					)
+					
+					-- Get the transpose of the inverse bone matrix
+				   local nrmMtx = inverse boneDum.transform
+				   nrmMtx = matrix3 [nrmMtx[1][1],nrmMtx[2][1],nrmMtx[3][1]] [nrmMtx[1][2],nrmMtx[2][2],nrmMtx[3][2]] [nrmMtx[1][3],nrmMtx[2][3],nrmMtx[3][3]] [0,0,0]
+					
 					if vertCount > 0 then
 					(
 						local vtIndex
@@ -120,6 +125,7 @@
 						(
 							vtIndex = vt + vertIndex
 							vertices[vtIndex] = vertices[vtIndex] * boneDum.transform
+							normals[vtIndex] = normals[vtIndex] * nrmMtx
 						)
 					)
 					append weights [vertCount,vertIndex]
@@ -143,27 +149,28 @@
 		setMesh mainObject tverts:texVerts
 		
 -- 		--set smoothing group of all faces to 1 to get one normal per vertex
--- 		for face = 1 to mainObject.numfaces do setFaceSmoothGroup mainObject face 1
+ 		for face = 1 to mainObject.numfaces do setFaceSmoothGroup mainObject face 1
 -- 		--set normals via edit normals modifier
--- 		select mainObject
--- 		addmodifier mainObject (Edit_Normals ()) ui:off
--- 		mainObject.Edit_Normals.MakeExplicit selection:#{1..normals.count}
--- 		EN_convertVS = mainObject.Edit_Normals.ConvertVertexSelection
--- 		EN_setNormal = mainObject.Edit_Normals.SetNormal
--- 		normID = #{}
+ 		select mainObject
+ 		addmodifier mainObject (Edit_Normals ()) ui:off
+ 		mainObject.Edit_Normals.MakeExplicit selection:#{1..normals.count}
+ 		EN_convertVS = mainObject.Edit_Normals.ConvertVertexSelection
+ 		EN_setNormal = mainObject.Edit_Normals.SetNormal
+ 		normID = #{}
 -- 		--apply normals
--- 		for v = 1 to normals.count do
--- 		(
--- 			free normID
--- 			EN_convertVS #{v} &normID
--- 			for id in normID do EN_setNormal id normals[v]
--- 		)
--- 		collapseStack mainObject
+ 		for v = 1 to normals.count do
+ 		(
+ 			free normID
+ 			EN_convertVS #{v} &normID
+ 			for id in normID do EN_setNormal id normals[v]
+ 		)
+ 		collapseStack mainObject
 		
 		-- skin the mesh
 		select mainObject
 		addmodifier mainObject (Skin()) ui:off
 		local skinMod = mainObject.Skin
+		skinMod.bone_Limit = 1
 		for bd = 1 to dummies.count do
 		(
 			skinOps.addBone skinMod dummies[bd] 0

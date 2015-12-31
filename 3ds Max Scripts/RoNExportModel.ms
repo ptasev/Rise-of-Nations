@@ -1,6 +1,6 @@
 -- Ris of Nations Model Exporter
 -- By Petar Tasev
--- Version 1.0.2015.0906
+-- Version 1.0.2015.1230
 global meshSetVertFunc = meshOp.setVert
 global meshGetVertFunc = meshOp.getVert
 global meshGetMapVertFunc = meshop.getmapvert
@@ -140,6 +140,22 @@ fn getBhBoneByName boneNode boneName =
 			mMesh
 		)
 		
+		function CalculateAveragedNormals mObject &normals =
+		(
+			local vertCount = (meshop.getnumverts mObject)
+			EN_convertVS = mObject.modifiers[#edit_normals].ConvertVertexSelection
+			EN_getNormal = mObject.modifiers[#edit_normals].GetNormal
+			for v in 1 to vertCount do
+			(
+				local vertexNormalIds = #{}
+				EN_convertVS #{v} vertexNormalIds
+				local averageNormal = [0,0,0]
+				for n in vertexNormalIds do averageNormal += EN_getNormal n
+				averageNormal = normalize (averageNormal / vertexNormalIds.numberset)
+				normals[v] = averageNormal
+			)
+		)
+		
 		function ExportSceneNodes scNode &parentBone =
 		(
 			local scNodeClass = classof scNode
@@ -261,6 +277,25 @@ fn getBhBoneByName boneNode boneName =
 		local faceCount = brgFaceArray.count
 		local meshDataLength = 40 * vertCount + 56 + 6 * faceCount
 		
+		global normals = #()
+		local hasEditNormal = false
+		if mainObject.modifiers[#edit_normals] == undefined then
+		(
+			addmodifier mainObject (Edit_Normals ()) ui:off
+		)
+		else
+		(
+			hasEditNormal = true
+		)
+		modPanel.setCurrentObject mainObject.modifiers[#edit_normals] ui:true
+		CalculateAveragedNormals mainObject &normals
+		--format "%" normals[1]
+		if not(hasEditNormal) then
+		(
+			deleteModifier mainObject mainObject.modifiers[#edit_normals]
+		)
+		modPanel.setCurrentObject skinMod ui:true
+		
 		fn writeVertices binStr =
 		(
 			writeLong binStr (vertCount * 16 + 12)
@@ -273,9 +308,14 @@ fn getBhBoneByName boneNode boneName =
 				local vertex = meshGetVertFunc mainMesh brgVertIndices[vi]
 				local boneId = skinGetVertWeightBoneIDFunc skinMod vi 1
 				local boneName = skinGetBoneNameFunc skinMod boneId 1
-				global bhBoneNode = getBhBoneByName rootBone boneName
+				local bhBoneNode = getBhBoneByName rootBone boneName
+				
+				-- Get the transpose of the inverse bone matrix
+			   local nrmMtx = inverse bhBoneNode.node.transform
+			   nrmMtx = matrix3 [nrmMtx[1][1],nrmMtx[2][1],nrmMtx[3][1]] [nrmMtx[1][2],nrmMtx[2][2],nrmMtx[3][2]] [nrmMtx[1][3],nrmMtx[2][3],nrmMtx[3][3]] [0,0,0]
 				
 				vertex = vertex * inverse(bhBoneNode.node.transform)
+				normals[vi] = (normalize(normals[vi] * inverse(nrmMtx)))
 				if bhBoneNode.vertIndexStart < 0 then
 				(
 					bhBoneNode.vertIndexStart = vi - 1
@@ -289,7 +329,7 @@ fn getBhBoneByName boneNode boneName =
 			)
 		)
 		
-		fn writeUnknown binStr =
+		fn writeNormals binStr =
 		(
 			writeLong binStr (vertCount * 16 + 12)
 			writeShort binStr 3
@@ -298,18 +338,14 @@ fn getBhBoneByName boneNode boneName =
 			
 			for vi = 1 to vertCount do
 			(
-				writeByte binStr 255
-				writeByte binStr 255
-				writeByte binStr 255
-				writeByte binStr 255
-				writeByte binStr 255
-				writeByte binStr 255
-				writeByte binStr 255
-				writeByte binStr 255
-				writeByte binStr 255
-				writeByte binStr 255
-				writeByte binStr 255
-				writeByte binStr 255
+				local normal = normals[vi]
+				writeFloat binStr normal.x
+				writeFloat binStr normal.y
+				writeFloat binStr normal.z
+			)
+			
+			for vi = 1 to vertCount do
+			(
 				writeByte binStr 255
 				writeByte binStr 255
 				writeByte binStr 255
@@ -359,7 +395,7 @@ fn getBhBoneByName boneNode boneName =
 		writeShort f 4
 		
 		writeVertices f
-		writeUnknown f
+		writeNormals f
 		writeTexCoords f
 		writeFaces f
 		
