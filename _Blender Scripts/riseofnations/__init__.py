@@ -102,6 +102,44 @@ class ExportBH3(Operator, ExportHelper):
         return file_exporter.save(context, self.filepath)
 
 
+class ImportBHA(Operator, ImportHelper):
+    """Load a Rise of Nations BHA file"""
+    bl_idname = "import_anim.bha"  # important since its how bpy.ops.import_test.some_data is constructed
+    bl_label = "Import BHA"
+
+    # ImportHelper mixin class uses this
+    filename_ext = ".BHA"
+
+    filter_glob = StringProperty(
+        default="*.BHA",
+        options={'HIDDEN'},
+    )
+
+    def execute(self, context):
+        from .blender.bhafileimporter import BHAFileImporter
+        file_importer = BHAFileImporter()
+        return file_importer.load(context, self.filepath)
+
+
+class ExportBHA(Operator, ExportHelper):
+    """Save a Rise of Nations BHA file"""
+    bl_idname = "export_anim.bha"
+    bl_label = "Export BHA"
+
+    # ExportHelper mixin class uses this
+    filename_ext = ".BHA"
+
+    filter_glob = StringProperty(
+        default="*.BHA",
+        options={'HIDDEN'},
+    )
+
+    def execute(self, context):
+        from .blender.bhafileexporter import BHAFileExporter
+        file_exporter = BHAFileExporter()
+        return file_exporter.save(context, self.filepath)
+
+
 # Only needed if you want to add into a dynamic menu
 def menu_func_import(self, context):
     self.layout.operator(ImportBH3.bl_idname, text="Rise of Nations (.BH3)")
@@ -111,18 +149,34 @@ def menu_func_export(self, context):
     self.layout.operator(ExportBH3.bl_idname, text="Rise of Nations (.BH3)")
 
 
+def menu_func_import_bha(self, context):
+    self.layout.operator(ImportBHA.bl_idname, text="Rise of Nations (.BHA)")
+
+
+def menu_func_export_bha(self, context):
+    self.layout.operator(ExportBHA.bl_idname, text="Rise of Nations (.BHA)")
+
+
 def register():
     bpy.utils.register_class(ImportBH3)
     bpy.utils.register_class(ExportBH3)
+    bpy.utils.register_class(ImportBHA)
+    bpy.utils.register_class(ExportBHA)
     bpy.types.INFO_MT_file_import.append(menu_func_import)
     bpy.types.INFO_MT_file_export.append(menu_func_export)
+    bpy.types.INFO_MT_file_import.append(menu_func_import_bha)
+    bpy.types.INFO_MT_file_export.append(menu_func_export_bha)
 
 
 def unregister():
     bpy.utils.unregister_class(ImportBH3)
     bpy.utils.unregister_class(ExportBH3)
+    bpy.utils.unregister_class(ImportBHA)
+    bpy.utils.unregister_class(ExportBHA)
     bpy.types.INFO_MT_file_import.remove(menu_func_import)
     bpy.types.INFO_MT_file_export.remove(menu_func_export)
+    bpy.types.INFO_MT_file_import.remove(menu_func_import_bha)
+    bpy.types.INFO_MT_file_export.remove(menu_func_export_bha)
 
 
 if __name__ == "__main__":
@@ -134,4 +188,4 @@ if __name__ == "__main__":
     # bh3_file.write('C:\Games\Steam\SteamApps\common\Rise of Nations\\art\\riflemanO_t.BH3')
 
     # test call
-    bpy.ops.import_scene.bh3('INVOKE_DEFAULT')
+    # bpy.ops.import_scene.bh3('INVOKE_DEFAULT')

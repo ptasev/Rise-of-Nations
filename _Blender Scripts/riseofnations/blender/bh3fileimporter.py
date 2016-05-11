@@ -1,6 +1,7 @@
 import bpy
 from mathutils import Vector, Quaternion, Matrix
 from ..formats.bh3.bh3file import BH3File
+from time import process_time
 import os
 
 
@@ -9,9 +10,9 @@ class BH3FileImporter:
         self._file = None
         self._model = None
         self._armature = None
-        return
 
     def load(self, ctx, filename):
+        start_time = process_time()
         model_name = os.path.splitext(os.path.basename(filename))[0]
         tex_path = filename[:-3] + 'tga'
 
@@ -45,14 +46,16 @@ class BH3FileImporter:
         uv_layer.name = 'DefaultUV'
         uv_loops = mesh.uv_layers[-1].data
 
-        vertex_loops = {}
-        for l in mesh.loops:
-            vertex_loops.setdefault(l.vertex_index, []).append(l.index)
-
-        for i, uv in enumerate(self._file.uvs):
-            # For every loop of a vertex
-            for li in vertex_loops[i]:
-                uv_loops[li].uv = uv
+        for loop in mesh.loops:
+            uv_loops[loop.index].uv = self._file.uvs[loop.vertex_index]
+        # vertex_loops = {}
+        # for l in mesh.loops:
+        #     vertex_loops.setdefault(l.vertex_index, []).append(l.index)
+        #
+        # for i, uv in enumerate(self._file.uvs):
+        #     # For every loop of a vertex
+        #     for li in vertex_loops[i]:
+        #         uv_loops[li].uv = uv
 
         self._create_vertex_groups(self._file.root_bone)
 
@@ -74,6 +77,7 @@ class BH3FileImporter:
 
         mesh.materials.append(material)
 
+        print('Import took {:f} seconds'.format(process_time() - start_time))
         return {'FINISHED'}
 
     def _create_bones(self, bone, parent):
@@ -83,19 +87,18 @@ class BH3FileImporter:
         if parent:
             abone.parent = parent
 
-        rot_part = Quaternion(bone.rotation).to_matrix()
+        rot_part = Quaternion(bone.rotation).inverted().to_matrix()
         pos_part = Vector(bone.position)
         transform = Matrix.Translation(bone.position) * rot_part.to_4x4()
 
         if parent:
-            rot_part = rot_part * parent.matrix.to_3x3()
-            pos_part = parent.matrix.to_translation() + (pos_part * parent.matrix.to_3x3())
-            transform = Matrix.Translation(list(pos_part)) * rot_part.to_4x4()
+            transform = parent.matrix * transform
+            rot_part = transform.to_3x3()
+            pos_part = transform.to_translation()
 
+        # abone.transform(transform)
         abone.transform(rot_part)
         abone.translate(pos_part)
-        # print(abone.matrix.to_3x3().to_quaternion())
-        # print(transform.to_3x3().to_quaternion())
 
         nrm_mtx = transform.to_3x3()
         nrm_mtx.invert()
@@ -103,9 +106,8 @@ class BH3FileImporter:
 
         for vi in range(0, bone.vertex_count):
             vt_ind = vi + bone.vertex_index
-            self._file.vertices[vt_ind] = list(
-                Vector(self._file.vertices[vt_ind]) * transform.to_3x3() + transform.to_translation())
-            self._file.normals[vt_ind] = list(Vector(self._file.normals[vt_ind]) * nrm_mtx)
+            self._file.vertices[vt_ind] = list(transform * Vector(self._file.vertices[vt_ind]))
+            self._file.normals[vt_ind] = list(nrm_mtx * Vector(self._file.normals[vt_ind]))
 
         for child in bone.children:
             self._create_bones(child, abone)

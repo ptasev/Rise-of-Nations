@@ -2,7 +2,7 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$USER_HOME$/AppData/Roaming/Blender Foundation/Blender/2.76/scripts/addons/riseofnations/.idea/riseofnations.iml" filepath="$USER_HOME$/AppData/Roaming/Blender Foundation/Blender/2.76/scripts/addons/riseofnations/.idea/riseofnations.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/riseofnations.iml" filepath="$PROJECT_DIR$/.idea/riseofnations.iml" />
     </modules>
   </component>
 </project>

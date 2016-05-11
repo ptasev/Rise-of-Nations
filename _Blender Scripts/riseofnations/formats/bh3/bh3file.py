@@ -21,10 +21,10 @@ class BH3File:
         """
         with open(filename, 'rb') as f:
             reader = BH3BinaryReader(f)
-            self.read_chunk(reader)
+            self._read_chunk(reader)
 
-    def read_chunk(self, reader, parent=None):
-        reader.read_uint32()  # data_length
+    def _read_chunk(self, reader, parent=None):
+        reader.read_uint32()  # data_size
         chunk_type = reader.read_uint16()
         num_children = reader.read_uint16()
 
@@ -47,10 +47,10 @@ class BH3File:
             for fa in range(0, num_elements):
                 self.faces.append(reader.read_face())
         elif chunk_type == 6:
-            parent = self.read_chunk(reader, parent)
+            parent = self._read_chunk(reader, parent)
             num_children -= 1
             for bc in range(0, num_children):
-                self.read_chunk(reader, parent)
+                self._read_chunk(reader, parent)
             self.root_bone = parent
         elif chunk_type == 7:
             bone = BH3Bone()
@@ -61,12 +61,11 @@ class BH3File:
             return bone
         else:
             for c in range(0, num_children):
-                self.read_chunk(reader)
+                self._read_chunk(reader)
 
     def calc_size(self):
-        self.root_bone.calc_size()
         self._mesh_data_size = 56 + 40 * len(self.vertices) + 6 * len(self.faces)
-        self._file_size = 8 + self._mesh_data_size + self.root_bone._total_data_size
+        self._file_size = 8 + self._mesh_data_size + self.root_bone.calc_size()
 
     def write(self, filename):
         with open(filename, 'wb') as f:

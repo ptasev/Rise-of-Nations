@@ -13,7 +13,6 @@ class BH3FileExporter:
         self._uv_loops = None
         self._vertex_uv_loop_index = dict()
         self._vertex_old_new_index = dict()
-        return
 
     def save(self, ctx, filename):
         self._file = BH3File()
@@ -38,6 +37,7 @@ class BH3FileExporter:
             average_normal.normalize()
             self._normals.append(average_normal)
 
+        # TODO: Find the skin mod properly
         skin_mod = self._model.modifiers[0]
         skin = skin_mod.object
         ctx.scene.objects.active = skin
@@ -65,6 +65,7 @@ class BH3FileExporter:
         bone.name = abone.name
         bone_vertices = []
 
+        # TODO: Implement this method to calculate all data based on looping through the faces (polygons)
         # Find verts based on the bones, and create a dictionary mapping old vertex index to new vertex index
         for v in self._mesh.vertices:
             if not (v.index in self._vertex_old_new_index):
@@ -79,33 +80,30 @@ class BH3FileExporter:
         bone.vertex_count = len(bone_vertices)
         # Calculate the local rotation and position for the bone
         if abone.parent:
-            par_rot_inv = abone.parent.matrix.copy()
-            par_rot_inv.invert()
-            bone.rotation = list((abone.matrix * par_rot_inv).to_quaternion())
-            bone.position = list((abone.head - abone.parent.head) * par_rot_inv)
+            transform = abone.parent.matrix.inverted() * abone.matrix
+            bone.rotation = list(transform.transposed().to_quaternion())
+            bone.position = list(transform.to_translation())
         else:
-            bone.rotation = list(abone.matrix.to_quaternion())
-            bone.position = list(abone.head)
+            bone.rotation = list(abone.matrix.transposed().to_quaternion())
+            bone.position = list(abone.matrix.to_translation())
 
         # Localize, and add the bone's vertices, normals, and uvs to the file
         if bone.vertex_count > 0:
             bone.vertex_index = vertex_index[0]
             vertex_index[0] += bone.vertex_count
 
-            rot_inv = abone.matrix.copy().to_3x3()
-            rot_inv.invert()
-            nrm_mtx = rot_inv.copy()
-            nrm_mtx.transpose()
-            nrm_mtx.invert()
+            transform_inverse = abone.matrix.inverted()
+            nrm_mtx = transform_inverse.transposed().inverted()
 
             for vi in bone_vertices:
-                self._file.vertices.append(list((self._mesh.vertices[vi].co - abone.head) * rot_inv))
-                self._file.normals.append(list(self._normals[vi] * nrm_mtx))
+                self._file.vertices.append(list(transform_inverse * self._mesh.vertices[vi].co))
+                self._file.normals.append(list(nrm_mtx * self._normals[vi]))
                 self._file.uvs.append(list(self._uv_loops[self._vertex_uv_loop_index[vi]].uv) if self._uv_loops else
                                       [0, 1])
 
         for achild in abone.children:
             child = self._create_bh3_bones(achild, vertex_index)
+            child.parent = bone
             bone.children.append(child)
 
         return bone

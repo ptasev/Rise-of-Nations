@@ -24,8 +24,9 @@ class BH3Bone:
         self._total_data_size += self._data_size + 8
 
         for child in self.children:
-            child.calc_size()
-            self._total_data_size += child._total_data_size
+            self._total_data_size += child.calc_size()
+
+        return self._total_data_size
 
     def write(self, writer):
         writer.write_uint32(self._total_data_size)
