@@ -1,12 +1,13 @@
 bl_info = {
     "name": "Rise of Nations BigHuge3D & BigHugeAnimation format",
     "author": "Petar Tasev",
-    "version": (1, 0, 2016, 508),
-    "blender": (2, 76, 0),
+    "version": (1, 0, 2016, 513),
+    "blender": (2, 77, 0),
     "location": "File > Import-Export",
-    "description": "Import-Export BH3 mesh, UV's, skeleton, and BHA animation",
+    "description": "Import-Export BH3 mesh, UVs, skeleton, and BHA animation",
     "warning": "",
-    "wiki_url": "",
+    "wiki_url": "http://www.petartasev.com/modding/rise-of-nations/blender-addon/",
+    "tracker_url": "https://github.com/Ryder25/Rise-of-Nations/issues",
     "support": 'COMMUNITY',
     "category": "Import-Export"}
 
@@ -63,11 +64,11 @@ class ImportBH3(Operator, ImportHelper):
 
     # List of operator properties, the attributes will be assigned
     # to the class instance from the operator settings before calling.
-    #    use_setting = BoolProperty(
-    #            name="Example Boolean",
-    #            description="Example Tooltip",
-    #            default=True,
-    #            )
+    import_normals = BoolProperty(
+       name="Import Normals",
+       description="Import the normals from the file",
+       default=True,
+    )
 
     #    type = EnumProperty(
     #            name="Example Enum",
@@ -79,7 +80,7 @@ class ImportBH3(Operator, ImportHelper):
 
     def execute(self, context):
         from .blender.bh3fileimporter import BH3FileImporter
-        file_importer = BH3FileImporter()
+        file_importer = BH3FileImporter(self.import_normals)
         return file_importer.load(context, self.filepath)
 
 
@@ -96,9 +97,15 @@ class ExportBH3(Operator, ExportHelper):
         options={'HIDDEN'},
     )
 
+    preserve_uvs = BoolProperty(
+        name="Preserve UVs",
+        description="Duplicate the mesh vertices so that they have 1:1 correspondence with their UVs",
+        default=False,
+    )
+
     def execute(self, context):
         from .blender.bh3fileexporter import BH3FileExporter
-        file_exporter = BH3FileExporter()
+        file_exporter = BH3FileExporter(self.preserve_uvs)
         return file_exporter.save(context, self.filepath)
 
 
@@ -115,9 +122,15 @@ class ImportBHA(Operator, ImportHelper):
         options={'HIDDEN'},
     )
 
+    stabilize_quaternions = BoolProperty(
+       name="Stabilize Quaternions",
+       description="Import each quaternion as the shortest arc from the previous keyframe",
+       default=True,
+    )
+
     def execute(self, context):
         from .blender.bhafileimporter import BHAFileImporter
-        file_importer = BHAFileImporter()
+        file_importer = BHAFileImporter(self.stabilize_quaternions)
         return file_importer.load(context, self.filepath)
 
 

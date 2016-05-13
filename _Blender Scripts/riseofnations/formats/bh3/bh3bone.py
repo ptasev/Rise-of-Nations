@@ -2,7 +2,7 @@ class BH3Bone:
     def __init__(self):
         self.vertex_index = -1
         self.vertex_count = 0
-        self.name = 'bone_unnamed'
+        self.name = "bone_unnamed"
         self.rotation = [1, 0, 0, 0]
         self.position = [0, 0, 0]
         self.parent = None

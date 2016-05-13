@@ -6,7 +6,7 @@ from time import process_time
 
 
 class BH3FileExporter:
-    def __init__(self):
+    def __init__(self, preserve_uvs):
         self._file = None
         self._model = None
         self._mesh = None
@@ -16,6 +16,7 @@ class BH3FileExporter:
         self._vertex_count = 0
         self._vertex_index = 0
         self._traversed_loops = set()
+        self._preserve_uvs = preserve_uvs
 
     def save(self, ctx, filename):
         start_time = process_time()
@@ -36,8 +37,11 @@ class BH3FileExporter:
             average_normal.normalize()
             self._normals.append(average_normal)
 
-        # TODO: Find the skin mod properly
-        skin_mod = self._model.modifiers[0]
+        skin_mod = None
+        for modifier in self._model.modifiers:
+            if type(modifier) is bpy.types.ArmatureModifier:
+                skin_mod = modifier
+                break
         skin = skin_mod.object
         ctx.scene.objects.active = skin
         bpy.ops.object.mode_set(mode='EDIT')
@@ -56,7 +60,7 @@ class BH3FileExporter:
 
         self._file.write(filename)
 
-        print('Export took {:f} seconds'.format(process_time() - start_time))
+        print("BH3 export took {:f} seconds".format(process_time() - start_time))
         return {'FINISHED'}
 
     def _create_bh3_bones(self, abone):
@@ -106,6 +110,11 @@ class BH3FileExporter:
                         loop.vertex_index = bone_vertices[loop.vertex_index]
                         continue
 
+                    if not self._preserve_uvs:
+                        # Don't care about other UVs, we only want the first one
+                        loop.vertex_index = next(iter(bone_vertices[loop.vertex_index].values()))
+                        continue
+
                     uv_dict = bone_vertices[loop.vertex_index]
                     uv = tuple(self._uv_loops[loop.index].uv)
 
@@ -116,7 +125,6 @@ class BH3FileExporter:
                         loop.vertex_index = uv_dict[uv]
                     else:
                         # Unique UV, copy the vertex to avoid seams
-                        print('Hellooooooooooooooooooooooooooooooooooooooooooooooo')
                         self._file.vertices.append(
                             list(transform_inverse * self._mesh.vertices[loop.vertex_index].co))
                         self._file.normals.append(list(nrm_mtx * self._normals[loop.vertex_index]))

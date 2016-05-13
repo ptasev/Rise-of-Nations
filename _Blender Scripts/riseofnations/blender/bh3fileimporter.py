@@ -6,21 +6,22 @@ import os
 
 
 class BH3FileImporter:
-    def __init__(self):
+    def __init__(self, import_normals):
         self._file = None
         self._model = None
         self._armature = None
+        self._import_normals = import_normals
 
     def load(self, ctx, filename):
         start_time = process_time()
         model_name = os.path.splitext(os.path.basename(filename))[0]
-        tex_path = filename[:-3] + 'tga'
+        tex_path = filename[:-3] + "tga"
 
         self._file = BH3File()
         self._file.read(filename)
 
-        self._armature = bpy.data.armatures.new(model_name + '_Arm')
-        skin = bpy.data.objects.new(model_name + '_Skin', self._armature)
+        self._armature = bpy.data.armatures.new(model_name + "_Arm")
+        skin = bpy.data.objects.new(model_name + "_Skin", self._armature)
         skin.location = [0, 0, 0]
         ctx.scene.objects.link(skin)
         ctx.scene.objects.active = skin
@@ -30,7 +31,7 @@ class BH3FileImporter:
 
         # create the mesh
         bpy.ops.object.mode_set(mode='OBJECT')
-        mesh = bpy.data.meshes.new(model_name + '_Mesh')
+        mesh = bpy.data.meshes.new(model_name + "_Mesh")
         self._model = bpy.data.objects.new(model_name, mesh)
         self._model.location = [0, 0, 0]
         ctx.scene.objects.link(self._model)
@@ -39,34 +40,27 @@ class BH3FileImporter:
 
         mesh.from_pydata(self._file.vertices, [], self._file.faces)
         mesh.update(calc_edges=True, calc_tessface=True)
-        mesh.normals_split_custom_set_from_vertices(self._file.normals)
+        if self._import_normals:
+            mesh.normals_split_custom_set_from_vertices(self._file.normals)
         mesh.use_auto_smooth = True
 
         uv_layer = mesh.uv_textures.new()
-        uv_layer.name = 'DefaultUV'
+        uv_layer.name = model_name + "_UV"
         uv_loops = mesh.uv_layers[-1].data
 
         for loop in mesh.loops:
             uv_loops[loop.index].uv = self._file.uvs[loop.vertex_index]
-        # vertex_loops = {}
-        # for l in mesh.loops:
-        #     vertex_loops.setdefault(l.vertex_index, []).append(l.index)
-        #
-        # for i, uv in enumerate(self._file.uvs):
-        #     # For every loop of a vertex
-        #     for li in vertex_loops[i]:
-        #         uv_loops[li].uv = uv
 
         self._create_vertex_groups(self._file.root_bone)
 
-        mod = self._model.modifiers.new('MySkinMod', 'ARMATURE')
+        mod = self._model.modifiers.new(model_name + "_Arm_Mod", 'ARMATURE')
         mod.object = skin
         mod.use_bone_envelopes = False
         mod.use_vertex_groups = True
 
-        material = bpy.data.materials.new('mat')
+        material = bpy.data.materials.new(model_name + "_Mat")
 
-        texture = bpy.data.textures.new('tex', type='IMAGE')
+        texture = bpy.data.textures.new(model_name + "_Tex", type='IMAGE')
         if os.path.isfile(tex_path):
             texture.image = bpy.data.images.load(tex_path)
         texture.use_alpha = True
@@ -77,7 +71,7 @@ class BH3FileImporter:
 
         mesh.materials.append(material)
 
-        print('Import took {:f} seconds'.format(process_time() - start_time))
+        print("BH3 import took {:f} seconds".format(process_time() - start_time))
         return {'FINISHED'}
 
     def _create_bones(self, bone, parent):

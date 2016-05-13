@@ -1,6 +1,7 @@
 import bpy
 from ..formats.bha.bhafile import BHAFile
 from ..formats.bha.bhabonetrack import BHABoneTrack
+from time import process_time
 
 
 class BHAFileExporter:
@@ -12,6 +13,7 @@ class BHAFileExporter:
         self._fps = 30
 
     def save(self, ctx, filename):
+        start_time = process_time()
         self._file = BHAFile()
         self._scene = ctx.scene
 
@@ -22,6 +24,8 @@ class BHAFileExporter:
         bpy.ops.object.mode_set(mode='OBJECT')
         self._file.root_bone_track = self._create_bone_tracks(self._skin.pose.bones[0])
         self._file.write(filename)
+
+        print("BHA export took {:f} seconds".format(process_time() - start_time))
         return {'FINISHED'}
 
     def _create_bone_tracks(self, pose_bone):
@@ -36,7 +40,7 @@ class BHAFileExporter:
 
             bone_track_key.time_step = (frame - base_time) / self._fps
             bone_track_key.rotation = pose_bone.rotation_quaternion.inverted()
-            bone_track_key.position = pose_bone.location
+            bone_track_key.position = list(pose_bone.location)
 
             base_time = frame
 
@@ -50,7 +54,7 @@ class BHAFileExporter:
     def _get_bone_keyframe_times(self, pose_bone):
         keyframes = set()
         for fcu in self._action.fcurves:
-            if fcu.data_path.split('"')[1] == pose_bone.name:
+            if fcu.data_path.split("\"")[1] == pose_bone.name:
                 for keyframe in fcu.keyframe_points:
                     keyframes.add(keyframe.co[0])
         return sorted(keyframes)
