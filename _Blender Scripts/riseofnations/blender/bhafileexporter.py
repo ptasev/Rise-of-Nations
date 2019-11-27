@@ -17,7 +17,7 @@ class BHAFileExporter:
         self._file = BHAFile()
         self._scene = ctx.scene
 
-        self._skin = self._scene.objects.active
+        self._skin = ctx.view_layer.objects.active
         self._action = self._skin.animation_data.action
         self._fps = self._scene.render.fps
 

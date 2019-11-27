@@ -20,12 +20,15 @@ class BH3FileImporter:
         self._file = BH3File()
         self._file.read(filename)
 
+        collection = bpy.data.collections.new(model_name + "_Coll")
+        ctx.scene.collection.children.link(collection)
+
         self._armature = bpy.data.armatures.new(model_name + "_Arm")
         skin = bpy.data.objects.new(model_name + "_Skin", self._armature)
         skin.location = [0, 0, 0]
-        ctx.scene.objects.link(skin)
-        ctx.scene.objects.active = skin
-        ctx.scene.update()
+        collection.objects.link(skin)
+        ctx.view_layer.objects.active = skin
+        ctx.view_layer.update()
         bpy.ops.object.mode_set(mode='EDIT')
         self._create_bones(self._file.root_bone, None)
 
@@ -34,19 +37,18 @@ class BH3FileImporter:
         mesh = bpy.data.meshes.new(model_name + "_Mesh")
         self._model = bpy.data.objects.new(model_name, mesh)
         self._model.location = [0, 0, 0]
-        ctx.scene.objects.link(self._model)
-        ctx.scene.objects.active = self._model
-        ctx.scene.update()
+        collection.objects.link(self._model)
+        ctx.view_layer.objects.active = self._model
+        ctx.view_layer.update()
 
         mesh.from_pydata(self._file.vertices, [], self._file.faces)
-        mesh.update(calc_edges=True, calc_tessface=True)
+        mesh.update(calc_edges=True, calc_loop_triangles=True)
         if self._import_normals:
             mesh.normals_split_custom_set_from_vertices(self._file.normals)
         mesh.use_auto_smooth = True
 
-        uv_layer = mesh.uv_textures.new()
-        uv_layer.name = model_name + "_UV"
-        uv_loops = mesh.uv_layers[-1].data
+        uv_layer = mesh.uv_layers.new(name=model_name + "_UV")
+        uv_loops = uv_layer.data
 
         for loop in mesh.loops:
             uv_loops[loop.index].uv = self._file.uvs[loop.vertex_index]
@@ -59,15 +61,12 @@ class BH3FileImporter:
         mod.use_vertex_groups = True
 
         material = bpy.data.materials.new(model_name + "_Mat")
-
-        texture = bpy.data.textures.new(model_name + "_Tex", type='IMAGE')
+        material.use_nodes = True
+        bsdf = material.node_tree.nodes["Principled BSDF"]
+        texture = material.node_tree.nodes.new('ShaderNodeTexImage')
         if os.path.isfile(tex_path):
             texture.image = bpy.data.images.load(tex_path)
-        texture.use_alpha = True
-
-        mtex = material.texture_slots.add()
-        mtex.texture = texture
-        mtex.texture_coords = 'UV'
+        material.node_tree.links.new(bsdf.inputs['Base Color'], texture.outputs['Color'])
 
         mesh.materials.append(material)
 
@@ -83,10 +82,10 @@ class BH3FileImporter:
 
         rot_part = Quaternion(bone.rotation).inverted().to_matrix()
         pos_part = Vector(bone.position)
-        transform = Matrix.Translation(bone.position) * rot_part.to_4x4()
+        transform = Matrix.Translation(bone.position) @ rot_part.to_4x4()
 
         if parent:
-            transform = parent.matrix * transform
+            transform = parent.matrix @ transform
             rot_part = transform.to_3x3()
             pos_part = transform.to_translation()
 
@@ -100,8 +99,8 @@ class BH3FileImporter:
 
         for vi in range(0, bone.vertex_count):
             vt_ind = vi + bone.vertex_index
-            self._file.vertices[vt_ind] = list(transform * Vector(self._file.vertices[vt_ind]))
-            self._file.normals[vt_ind] = list(nrm_mtx * Vector(self._file.normals[vt_ind]))
+            self._file.vertices[vt_ind] = list(transform @ Vector(self._file.vertices[vt_ind]))
+            self._file.normals[vt_ind] = list(nrm_mtx @ Vector(self._file.normals[vt_ind]))
 
         for child in bone.children:
             self._create_bones(child, abone)

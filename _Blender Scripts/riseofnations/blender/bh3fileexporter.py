@@ -21,9 +21,9 @@ class BH3FileExporter:
     def save(self, ctx, filename):
         start_time = process_time()
         self._file = BH3File()
-        self._model = ctx.scene.objects.active
+        self._model = ctx.view_layer.objects.active
         # self._mesh = object_.data
-        self._mesh = self._model.to_mesh(ctx.scene, True, 'PREVIEW', True)
+        self._mesh = self._model.to_mesh()
         self._mesh.calc_normals_split()
 
         uv_layer = self._mesh.uv_layers.active
@@ -43,7 +43,8 @@ class BH3FileExporter:
                 skin_mod = modifier
                 break
         skin = skin_mod.object
-        ctx.scene.objects.active = skin
+        ctx.view_layer.objects.active = skin
+        ctx.view_layer.update()
         bpy.ops.object.mode_set(mode='EDIT')
         armature = skin.data
 
@@ -55,8 +56,8 @@ class BH3FileExporter:
                                      face.vertices[2]])
 
         bpy.ops.object.mode_set(mode='OBJECT')
-        ctx.scene.objects.active = self._model
-        bpy.data.meshes.remove(self._mesh)
+        ctx.view_layer.objects.active = self._model
+        ctx.view_layer.update()
 
         self._file.write(filename)
 
@@ -90,8 +91,8 @@ class BH3FileExporter:
                     # First time this vertex has been seen
                     self._traversed_loops.add(loop.index)
                     self._file.vertices.append(
-                        list(transform_inverse * self._mesh.vertices[loop.vertex_index].co))
-                    self._file.normals.append(list(nrm_mtx * self._normals[loop.vertex_index]))
+                        list(transform_inverse @ self._mesh.vertices[loop.vertex_index].co))
+                    self._file.normals.append(list(nrm_mtx @ self._normals[loop.vertex_index]))
 
                     if self._uv_loops:
                         uv = tuple(self._uv_loops[loop.index].uv)
@@ -126,8 +127,8 @@ class BH3FileExporter:
                     else:
                         # Unique UV, copy the vertex to avoid seams
                         self._file.vertices.append(
-                            list(transform_inverse * self._mesh.vertices[loop.vertex_index].co))
-                        self._file.normals.append(list(nrm_mtx * self._normals[loop.vertex_index]))
+                            list(transform_inverse @ self._mesh.vertices[loop.vertex_index].co))
+                        self._file.normals.append(list(nrm_mtx @ self._normals[loop.vertex_index]))
                         self._file.uvs.append(list(uv))
 
                         new_vertex_index = self._vertex_count
@@ -137,7 +138,7 @@ class BH3FileExporter:
 
         # Calculate the local rotation and position for the bone
         if abone.parent:
-            transform = abone.parent.matrix.inverted() * abone.matrix
+            transform = abone.parent.matrix.inverted() @ abone.matrix
             bone.rotation = list(transform.transposed().to_quaternion())
             bone.position = list(transform.to_translation())
         else:

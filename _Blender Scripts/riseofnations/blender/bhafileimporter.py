@@ -20,7 +20,7 @@ class BHAFileImporter:
         self._file = BHAFile()
         self._file.read(filename)
 
-        self._skin = ctx.scene.objects.active
+        self._skin = ctx.view_layer.objects.active
         if not self._skin.animation_data:
             self._skin.animation_data_create()
         self._action = bpy.data.actions.new(name=anim_name)
