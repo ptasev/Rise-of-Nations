@@ -42,7 +42,7 @@ class BH3FileImporter:
         ctx.view_layer.update()
 
         mesh.from_pydata(self._file.vertices, [], self._file.faces)
-        mesh.update(calc_edges=True, calc_loop_triangles=True)
+        mesh.update(calc_edges=True)
         if self._import_normals:
             mesh.normals_split_custom_set_from_vertices(self._file.normals)
         mesh.use_auto_smooth = True
