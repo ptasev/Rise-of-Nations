@@ -1,0 +1,43 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{44FB2BD2-1F55-4923-8C2F-CF5180222691}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RoNLibrary", "src\RoNLibrary\RoNLibrary.csproj", "{C9AE50EA-C62A-45B8-8222-80ED73B01CE2}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "010templates", "010templates", "{82075BA2-0B5A-4D9F-8D44-6C0D9E4980F5}"
+	ProjectSection(SolutionItems) = preProject
+		src\010templates\BH3.bt = src\010templates\BH3.bt
+		src\010templates\BHa.bt = src\010templates\BHa.bt
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{66F815B0-2DC4-48E7-8EAD-22B99FD2164B}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RoNLibrary.Tests", "tests\RoNLibrary.Tests\RoNLibrary.Tests.csproj", "{B96D1FF9-E206-4C65-AD7C-7B241910C164}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{C9AE50EA-C62A-45B8-8222-80ED73B01CE2} = {44FB2BD2-1F55-4923-8C2F-CF5180222691}
+		{82075BA2-0B5A-4D9F-8D44-6C0D9E4980F5} = {44FB2BD2-1F55-4923-8C2F-CF5180222691}
+		{B96D1FF9-E206-4C65-AD7C-7B241910C164} = {66F815B0-2DC4-48E7-8EAD-22B99FD2164B}
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{C9AE50EA-C62A-45B8-8222-80ED73B01CE2}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C9AE50EA-C62A-45B8-8222-80ED73B01CE2}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C9AE50EA-C62A-45B8-8222-80ED73B01CE2}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C9AE50EA-C62A-45B8-8222-80ED73B01CE2}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B96D1FF9-E206-4C65-AD7C-7B241910C164}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B96D1FF9-E206-4C65-AD7C-7B241910C164}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B96D1FF9-E206-4C65-AD7C-7B241910C164}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B96D1FF9-E206-4C65-AD7C-7B241910C164}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+EndGlobal
