@@ -1,6 +1,6 @@
 ﻿namespace RoNLibrary.Formats.Bha;
 
-public class BhaBoneTrack
+public class BhaBoneTrack : ITreeNode<BhaBoneTrack>
 {
     public List<BhaBoneTrackKey> Keys { get; set; } = [];
 

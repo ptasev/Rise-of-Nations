@@ -2,7 +2,7 @@
 
 namespace RoNLibrary.Formats.Bh3;
 
-public class Bh3Bone
+public class Bh3Bone : ITreeNode<Bh3Bone>
 {
     public int VertexStartIndex { get; set; }
     
