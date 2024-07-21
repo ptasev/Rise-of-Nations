@@ -31,6 +31,9 @@
       <None Update="data\ADVFighter_attack1.BHa">
         <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       </None>
+      <None Update="data\ADVFighter.tga">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      </None>
     </ItemGroup>
 
 </Project>

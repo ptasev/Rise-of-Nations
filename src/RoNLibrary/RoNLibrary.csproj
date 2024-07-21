@@ -6,4 +6,9 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
+  <ItemGroup>
+    <PackageReference Include="SharpGLTF.Toolkit" />
+    <PackageReference Include="SixLabors.ImageSharp" />
+  </ItemGroup>
+
 </Project>

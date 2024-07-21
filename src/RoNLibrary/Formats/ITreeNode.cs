@@ -8,7 +8,7 @@ public interface ITreeNode<T>
 
 public static class TreeNodeExtensions
 {
-    public static IEnumerable<ITreeNode<T>> TraverseDepthFirst<T>(this ITreeNode<T> node)
+    public static IEnumerable<T> TraverseDepthFirst<T>(this T node)
         where T : ITreeNode<T>
     {
         yield return node;
@@ -21,9 +21,7 @@ public static class TreeNodeExtensions
         }
     }
 
-    public static IEnumerable<(ITreeNode<T1>, ITreeNode<T2>)> ZipMatchingTreesDepthFirst<T1, T2>(
-        this ITreeNode<T1> node1,
-        ITreeNode<T2> node2)
+    public static IEnumerable<(T1, T2)> ZipMatchingTreesDepthFirst<T1, T2>(this T1 node1, T2 node2)
         where T1 : ITreeNode<T1>
         where T2 : ITreeNode<T2>
     {

@@ -1,0 +1,9 @@
+<Project>
+  <PropertyGroup>
+    <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageVersion Include="SharpGLTF.Toolkit" Version="1.0.1" />
+    <PackageVersion Include="SixLabors.ImageSharp" Version="3.1.4" />
+  </ItemGroup>
+</Project>
