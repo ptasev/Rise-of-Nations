@@ -90,16 +90,16 @@ public class Bh3GltfConverter
                 node = parent.CreateNode(boneName);
             }
 
-            var endIndex = bone.VertexStartIndex + bone.VertexCount;
-            for (int i = bone.VertexStartIndex; i < endIndex; i++)
-            {
-                vertices[i] = GetVertexBuilder(bh3, i, bones.Count);
-            }
-
             ConvertBone(bone, node, isRoot);
             if (bone.Children.Count > 0)
             {
                 parentStack.Push((bones.Count, bone.Children.Count));
+            }
+
+            var endIndex = bone.VertexStartIndex + bone.VertexCount;
+            for (int i = bone.VertexStartIndex; i < endIndex; i++)
+            {
+                vertices[i] = GetVertexBuilder(bh3, i, bones.Count, node);
             }
             
             bones.Add(new BoneData(node, boneTrack));
@@ -110,8 +110,9 @@ public class Bh3GltfConverter
 
     private static void ConvertBone(Bh3Bone bone, NodeBuilder nodeBuilder, bool adjustCoordSystem)
     {
-        // Bh3 uses the Blender/3ds Max right-handed coordinate system where X+ left, Y+ back, Z+ up, but left-handed
-        // this is different from gltf so let's adjust first the handedness, then rotation for root bone
+        // Bh3 -- Left-handed X Left, Y Back, Z Up
+        // glTF -- Right-handed X Left, Y Up, Z Forward
+        // Convert -- X = X, Y = Z, Z = -Y
         var rot = Quaternion.Inverse(bone.Rotation);
         nodeBuilder.UseTranslation().Value = adjustCoordSystem ? Vector3.Transform(bone.Translation, RotX90N) : bone.Translation;
         nodeBuilder.UseRotation().Value = adjustCoordSystem ? Quaternion.Concatenate(rot, RotX90NQuat) : rot;
@@ -121,7 +122,7 @@ public class Bh3GltfConverter
         string meshFilePath, string meshName)
     {
         var mb = ConvertMesh(bh3, skeleton.Vertices, meshFilePath, meshName);
-        var joints = skeleton.Bones.Select(data => (data.Node, Matrix4x4.Identity)).ToArray();
+        var joints = skeleton.Bones.Select(data => (data.Node, data.Node.GetInverseBindMatrix())).ToArray();
         sceneBuilder.AddSkinnedMesh(mb, joints).WithName(mb.Name);
     }
 
@@ -147,12 +148,20 @@ public class Bh3GltfConverter
         return mb;
     }
 
-    private static GltfVertexBuilder GetVertexBuilder(Bh3File bh3, int index, int boneIndex)
+    private static GltfVertexBuilder GetVertexBuilder(Bh3File bh3, int index, int boneIndex, NodeBuilder node)
     {
         var vb = new GltfVertexBuilder();
 
-        var vert = bh3.Positions[index];
-        vb.Geometry = new VertexPositionNormal(new Vector3(vert.X, vert.Y, vert.Z), bh3.Normals[index]);
+        if (!Matrix4x4.Invert(node.WorldMatrix, out var inverse))
+        {
+            throw new InvalidDataException($"World matrix of node {node.Name} could not be inverted.");
+        }
+        
+        var transposeInverse = Matrix4x4.Transpose(inverse);
+        var vert = Vector4.Transform(bh3.Positions[index], node.WorldMatrix);
+        var norm = Vector3.TransformNormal(bh3.Normals[index], transposeInverse);
+
+        vb.Geometry = new VertexPositionNormal(new Vector3(vert.X, vert.Y, vert.Z), norm);
         vb.Material.TexCoord = bh3.TextureCoordinates[index];
         vb.Skinning = new VertexJoints4(boneIndex);
 

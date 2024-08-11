@@ -20,11 +20,6 @@ public class GltfBh3Converter
         RotX90Quat = Quaternion.CreateFromRotationMatrix(RotX90);
     }
 
-    public GltfBh3Converter()
-    {
-
-    }
-
     private List<int> GetJoints(Skin skin)
     {
         return GetJointsField(skin);
@@ -197,10 +192,19 @@ public class GltfBh3Converter
     {
         // Get bone bindings
         var skinTransforms = new Matrix4x4[meshNode.Skin.JointsCount];
+        var skinNormalTransforms = new Matrix4x4[meshNode.Skin.JointsCount];
         for (int i = 0; i < skinTransforms.Length; ++i)
         {
             var skinJoint = meshNode.Skin.GetJoint(i);
             skinTransforms[i] = skinJoint.InverseBindMatrix;
+            
+            if (!Matrix4x4.Invert(skinJoint.InverseBindMatrix, out var inverse))
+            {
+                throw new InvalidDataException(
+                    $"Inverse bind matrix of node {skinJoint.Joint.Name} could not be inverted.");
+            }
+            
+            skinNormalTransforms[i] = Matrix4x4.Transpose(inverse);
         }
 
         // Export Vertices, Normals, TexCoords, VertexWeights and Faces
@@ -250,7 +254,7 @@ public class GltfBh3Converter
                     numAffected++;
 
                     finPos += Vector3.Transform(pos, skinTransforms[iw.Index]) * iw.Weight;
-                    finNorm += Vector3.TransformNormal(norm, skinTransforms[iw.Index]) * iw.Weight;
+                    finNorm += Vector3.TransformNormal(norm, skinNormalTransforms[iw.Index]) * iw.Weight;
 
                     var vertexIndex = baseVertexIndex + i;
                     if (vertexIndex > UInt16.MaxValue)
