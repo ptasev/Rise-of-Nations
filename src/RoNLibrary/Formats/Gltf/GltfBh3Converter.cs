@@ -40,15 +40,42 @@ public class GltfBh3Converter
         if (animIndex < 0 || animIndex >= gltf.LogicalAnimations.Count) animIndex = 0;
         var anim = gltf.LogicalAnimations.Count > 0 ? gltf.LogicalAnimations[animIndex] : null;
 
-        // Find all skinned meshes, get all skins, get all joints, get visual roots distinct, flatten roots
+        // Find all skinned meshes, get all skins, get all joints, get visual roots distinct
         var skinnedMeshNodes = Node.Flatten(scene).Where(x => x.Mesh is not null && x.Skin is not null).ToArray();
-        var skinRoots = skinnedMeshNodes
-            .SelectMany(x => GetJoints(x.Skin).Select(idx => x.LogicalParent.LogicalNodes[idx].VisualRoot)).Distinct();
-        var nodes = skinRoots.SelectMany(Node.Flatten).Distinct();
+        if (skinnedMeshNodes.Length <= 0)
+        {
+            throw new InvalidDataException("No skinned meshes were found.");
+        }
+
+        var skinNodes = skinnedMeshNodes.SelectMany(x =>
+            (x.Skin.Skeleton is null ? GetJoints(x.Skin) : GetJoints(x.Skin).Append(x.Skin.Skeleton.LogicalIndex))
+            .Select(idx => x.LogicalParent.LogicalNodes[idx])).ToHashSet();
+        var skinRoots = skinNodes.Select(x => x.VisualRoot).Distinct();
+        
+        // Flatten and skip top-level nodes that have identity transform, are not animated, and are not joints
+        var skippedParentIndices = new HashSet<int>();
+        var nodes = skinRoots.SelectMany(Node.Flatten).Distinct().Where(x =>
+        {
+            // Non-root nodes that don't have skipped parents don't need the check
+            if (x.VisualParent is not null && !skippedParentIndices.Contains(x.VisualParent.LogicalIndex))
+            {
+                return true;
+            }
+            
+            // Checking for animation across entire file in case user will convert other animations from same file
+            if (skinNodes.Contains(x) ||
+                (x.VisualChildren.Any() && (x.WorldMatrix != Matrix4x4.Identity || x.IsTransformAnimated)))
+            {
+                return true;
+            }
+
+            skippedParentIndices.Add(x.LogicalIndex);
+            return false;
+        });
 
         var nodeBoneIndexMap = new Dictionary<int, BoneData>();
         var bha = anim is not null && parameters.ConvertAnimations ? new BhaFile() : null;
-        ConvertSkeleton(bh3, bha, nodes, nodeBoneIndexMap);
+        ConvertSkeleton(bh3, bha, nodes, nodeBoneIndexMap, skippedParentIndices);
 
         if (parameters.ConvertMeshes)
         {
@@ -65,7 +92,7 @@ public class GltfBh3Converter
 
     private record BoneData(Bh3Bone Bone, BhaBoneTrack? BoneTrack, List<int> VertexIndices);
     private static void ConvertSkeleton(Bh3File bh3, BhaFile? bha, IEnumerable<Node> nodes,
-        Dictionary<int, BoneData> nodeBoneIndexMap)
+        Dictionary<int, BoneData> nodeBoneIndexMap, IReadOnlySet<int> skippedParentIndices)
     {
         bh3.RootBone = new Bh3Bone { Name = "gltfRoot" };
         if (bha is not null)
@@ -80,16 +107,18 @@ public class GltfBh3Converter
             var bone = new Bh3Bone { Name = node.Name ?? $"node{node.LogicalIndex}" };
             BhaBoneTrack? boneTrack = null;
 
-            if (node.LocalTransform.Scale != Vector3.One)
+            var scaleTest = Vector3.Abs(node.LocalTransform.Scale - Vector3.One);
+            if (scaleTest.X > 0.001 || scaleTest.Y > 0.001 || scaleTest.Z > 0.001)
             {
                 throw new InvalidDataException($"Node ({node.Name}) must not be scaled.");
             }
 
-            if (node.VisualParent is null)
+            var isRoot = node.VisualParent is null || skippedParentIndices.Contains(node.VisualParent.LogicalIndex);
+            if (isRoot)
             {
                 // Rotate root to adjust for difference of world space
                 bone.Translation = Vector3.Transform(node.LocalTransform.Translation, RotX90);
-                bone.Rotation = Quaternion.Concatenate(Quaternion.Inverse(node.LocalTransform.Rotation), RotX90Quat);
+                bone.Rotation = Quaternion.Inverse(Quaternion.Concatenate(node.LocalTransform.Rotation, RotX90Quat));
             }
             else
             {
@@ -97,7 +126,7 @@ public class GltfBh3Converter
                 bone.Rotation = Quaternion.Inverse(node.LocalTransform.Rotation);
             }
 
-            var parentIndex = node.VisualParent?.LogicalIndex ?? -1;
+            var parentIndex = isRoot ? -1 : (node.VisualParent?.LogicalIndex ?? -1);
             var parentMap = nodeBoneIndexMap[parentIndex];
             parentMap.Bone.Children.Add(bone);
             if (bha is not null)
