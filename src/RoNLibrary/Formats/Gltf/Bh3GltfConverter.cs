@@ -53,9 +53,7 @@ public class Bh3GltfConverter
     {
         var vertices = new GltfVertexBuilder[bh3.Positions.Count];
         var bones = new List<BoneData>();
-        var boneEnumerable = bha is null
-            ? bh3.RootBone.TraverseDepthFirst().Select(x => (x, (BhaBoneTrack?)null))
-            : bh3.RootBone.ZipMatchingTreesDepthFirst(bha.RootBoneTrack)!;
+        var boneEnumerable = bh3.RootBone.ZipMatchingTreesDepthFirst(bha?.RootBoneTrack);
         var names = new HashSet<string>();
 
         var parentStack = new Stack<(int ParentIndex, int ChildrenLeft)>();

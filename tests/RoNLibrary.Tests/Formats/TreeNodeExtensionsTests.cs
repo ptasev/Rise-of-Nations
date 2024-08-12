@@ -43,14 +43,34 @@ public class TreeNodeExtensionsTests
     }
 
     [Fact]
-    public void ZipMatchingTreesDepthFirst_ThrowsWhenNotMatching()
+    public void ZipMatchingTreesDepthFirst_FullNull()
+    {
+        var d1 = new Bh3Bone() { Name = "D1" };
+        var c1 = new Bh3Bone() { Name = "C1" };
+        var b1 = new Bh3Bone() { Name = "B1", Children = [c1] };
+        var a1 = new Bh3Bone() { Name = "A1", Children = [b1, d1]};
+        Bh3Bone? a2 = null;
+        
+        // Act
+        var res = a1.ZipMatchingTreesDepthFirst(a2);
+        
+        // Assert
+        Assert.Equal([(a1, a2), (b1, null), (c1, null), (d1, null)], res);
+    }
+
+    [Fact]
+    public void ZipMatchingTreesDepthFirst_PartialNull()
     {
         var c = new Bh3Bone() { Name = "C" };
-        var b = new Bh3Bone() { Name = "B" };
-        var a1 = new Bh3Bone() { Name = "A1", Children = [b, c]};
-        var a2 = new Bh3Bone() { Name = "A2", Children = [b]};
+        var b1 = new Bh3Bone() { Name = "B1" };
+        var a1 = new Bh3Bone() { Name = "A1", Children = [b1, c]};
+        var b2 = new Bh3Bone() { Name = "B2" };
+        var a2 = new Bh3Bone() { Name = "A2", Children = [b2]};
         
-        // Act/Assert
-        Assert.Throws<InvalidOperationException>(() => a1.ZipMatchingTreesDepthFirst(a2).ToArray());
+        // Act
+        var res = a1.ZipMatchingTreesDepthFirst(a2);
+        
+        // Assert
+        Assert.Equal([(a1, a2), (b1, b2), (c, null)], res);
     }
 }

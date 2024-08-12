@@ -9,8 +9,8 @@ public class Bh3Bone : ITreeNode<Bh3Bone>
     public int VertexCount { get; set; }
 
     public string Name { get; set; } = string.Empty;
-    
-    public Quaternion Rotation { get; set; }
+
+    public Quaternion Rotation { get; set; } = Quaternion.Identity;
     
     public Vector3 Translation { get; set; }
 
