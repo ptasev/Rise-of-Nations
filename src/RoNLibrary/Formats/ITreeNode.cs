@@ -21,6 +21,27 @@ public static class TreeNodeExtensions
         }
     }
 
+    public static IEnumerable<T> TraverseDepthFirstReverse<T>(this T node)
+        where T : ITreeNode<T>
+    {
+        for (var i = node.Children.Count - 1; i >= 0; --i)
+        {
+            var child = node.Children[i];
+            foreach (var childChild in TraverseDepthFirstReverse(child))
+            {
+                yield return childChild;
+            }
+        }
+
+        yield return node;
+    }
+
+    public static IEnumerable<T> TraverseDepthFirstParentReverse<T>(this T node)
+        where T : ITreeNode<T>
+    {
+        return TraverseDepthFirstReverse(node).Where(x => x.Children.Count > 0);
+    }
+
     public static IEnumerable<(T1, T2?)> ZipMatchingTreesDepthFirst<T1, T2>(this T1 node1, T2? node2)
         where T1 : class, ITreeNode<T1>
         where T2 : class, ITreeNode<T2>

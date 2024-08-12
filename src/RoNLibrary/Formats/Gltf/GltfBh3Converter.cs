@@ -82,9 +82,10 @@ public class GltfBh3Converter
             ConvertMeshes(bh3, skinnedMeshNodes, nodeBoneIndexMap);
         }
 
-        if (anim != null && parameters.ConvertAnimations)
+        if (anim is not null && parameters.ConvertAnimations && bha is not null)
         {
             ConvertAnimation(gltf, anim, nodeBoneIndexMap);
+            bha.Prune();
         }
 
         return (bh3, bha);

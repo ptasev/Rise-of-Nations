@@ -24,6 +24,42 @@ public class TreeNodeExtensionsTests
     }
 
     [Fact]
+    public void TraverseDepthFirstReverse_works()
+    {
+        var g = new Bh3Bone() { Name = "G" };
+        var f = new Bh3Bone() { Name = "F" };
+        var e = new Bh3Bone() { Name = "E", Children = [f, g]};
+        var d = new Bh3Bone() { Name = "D" };
+        var c = new Bh3Bone() { Name = "C" };
+        var b = new Bh3Bone() { Name = "B", Children = [c, d]};
+        var a = new Bh3Bone() { Name = "A", Children = [b, e]};
+        
+        // Act
+        var res = a.TraverseDepthFirstReverse();
+        
+        // Assert
+        Assert.Equal([g, f, e, d, c, b, a], res);
+    }
+
+    [Fact]
+    public void TraverseDepthFirstParentReverse_works()
+    {
+        var g = new Bh3Bone() { Name = "G" };
+        var f = new Bh3Bone() { Name = "F" };
+        var e = new Bh3Bone() { Name = "E", Children = [f, g]};
+        var d = new Bh3Bone() { Name = "D" };
+        var c = new Bh3Bone() { Name = "C" };
+        var b = new Bh3Bone() { Name = "B", Children = [c, d]};
+        var a = new Bh3Bone() { Name = "A", Children = [b, e]};
+        
+        // Act
+        var res = a.TraverseDepthFirstParentReverse().ToArray();
+        
+        // Assert
+        Assert.Equal([e, b, a], res);
+    }
+
+    [Fact]
     public void ZipMatchingTreesDepthFirst_works()
     {
         var d1 = new Bh3Bone() { Name = "D1" };

@@ -140,4 +140,45 @@ public class BhaFile
         writer.BaseStream.Seek(currentOffset, SeekOrigin.Begin);
         return boneTrackSize;
     }
+
+    /// <summary>
+    /// Prunes the animation by removing tracks without keys.
+    /// </summary>
+    /// <remarks>
+    /// The game crashes when any track has 0 keys.
+    /// Remove such tracks, but if they have children with keys add a fake no-offset key instead.
+    /// The depth-first traversal order must be preserved to match the model's skeleton
+    /// </remarks>
+    public void Prune()
+    {
+        foreach (var track in RootBoneTrack.TraverseDepthFirstParentReverse())
+        {
+            for (int i = track.Children.Count - 1; i >= 0; i--)
+            {
+                var child = track.Children[i];
+                if (child.Keys.Count > 0)
+                {
+                    continue;
+                }
+
+                if (child.Children.Count > 0 || i < track.Children.Count - 1)
+                {
+                    // Add dummy key since game crashes on tracks with no keys
+                    // Don't delete since this track has children with keys
+                    // Or it's not the last child, so we must keep it to preserve order
+                    child.Keys.Add(new BhaBoneTrackKey { Time = 1f / 30 });
+                }
+                else
+                {
+                    track.Children.Remove(child);
+                }
+            }
+        }
+        
+        // Assuming we can't remove root no matter what
+        if (RootBoneTrack.Keys.Count <= 0)
+        {
+            RootBoneTrack.Keys.Add(new BhaBoneTrackKey { Time = 1f / 30 });
+        }
+    }
 }
