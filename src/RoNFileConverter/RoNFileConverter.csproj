@@ -1,0 +1,29 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <OutputType>Exe</OutputType>
+        <AssemblyName>ron-file-converter</AssemblyName>
+        <Authors>Petar Tasev</Authors>
+        <Copyright>Copyright © 2024 Petar Tasev</Copyright>
+    </PropertyGroup>
+
+    <ItemGroup>
+      <PackageReference Include="ConsoleAppFramework">
+        <PrivateAssets>all</PrivateAssets>
+        <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      </PackageReference>
+      <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
+      <PackageReference Include="ZLogger" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\RoNLibrary\RoNLibrary.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <None Update="readme.html">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      </None>
+    </ItemGroup>
+
+</Project>
