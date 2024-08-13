@@ -85,7 +85,7 @@ public class GltfBh3Converter
         if (anim is not null && parameters.ConvertAnimations && bha is not null)
         {
             ConvertAnimation(gltf, anim, nodeBoneIndexMap);
-            bha.Prune();
+            bha.Patch();
         }
 
         return (bh3, bha);

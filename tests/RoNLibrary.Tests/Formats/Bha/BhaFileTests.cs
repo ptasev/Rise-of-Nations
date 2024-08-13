@@ -30,30 +30,33 @@ public class BhaFileTests
     }
 
     [Fact]
-    public void Prune_works()
+    public void Patch_works()
     {
         var g = new BhaBoneTrack() { Keys = [new BhaBoneTrackKey()]};
-        var f = new BhaBoneTrack() {  };
+        var f = new BhaBoneTrack();
         var e = new BhaBoneTrack() { Children = [f, g]};
-        var d = new BhaBoneTrack() {  };
-        var c = new BhaBoneTrack() {  };
+        var d = new BhaBoneTrack();
+        var c = new BhaBoneTrack();
         var b = new BhaBoneTrack() { Children = [c, d]};
         var a = new BhaBoneTrack() { Children = [b, e]};
         var bha = new BhaFile() { RootBoneTrack = a };
         
         // Act
-        bha.Prune();
-        var res = a.TraverseDepthFirst();
+        bha.Patch();
+        var res = a.TraverseDepthFirst().ToArray();
         
         // Assert
         Assert.Equal([a, b, e, f, g], res);
-        Assert.Single(g.Keys);
-        foreach (var track in (BhaBoneTrack[])[a, b, e, f])
+        var duration = res.Max(x => x.Keys.Sum(k => k.Time));
+        foreach (var track in (BhaBoneTrack[])[a, b, e, f, g])
         {
-            Assert.Single(track.Keys);
-            Assert.Equal(1f / 30, track.Keys.First().Time);
-            Assert.Equal(Vector3.Zero, track.Keys.First().Translation);
-            Assert.Equal(Quaternion.Identity, track.Keys.First().Rotation);
+            Assert.Equal(2, track.Keys.Count);
+            Assert.Equal(duration, track.Keys.Sum(x => x.Time));
+            foreach (var key in track.Keys)
+            {
+                Assert.Equal(Vector3.Zero, key.Translation);
+                Assert.Equal(Quaternion.Identity, key.Rotation);
+            }
         }
     }
 }

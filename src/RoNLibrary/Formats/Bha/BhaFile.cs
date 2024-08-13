@@ -144,15 +144,18 @@ public class BhaFile
     }
 
     /// <summary>
-    /// Prunes the animation by removing tracks without keys.
+    /// Prunes the animation and updates keys to be valid.
     /// </summary>
     /// <remarks>
-    /// The game crashes when any track has 0 keys.
-    /// Remove such tracks, but if they have children with keys add a fake no-offset key instead.
-    /// The depth-first traversal order must be preserved to match the model's skeleton
+    /// The game crashes when any track has 0 keys, or root has less than 2 keys.
+    /// The root track keys must sum up to the animation duration.
+    /// Remove tracks with no keys and no children.
+    /// The hierarchy order must be preserved to match the model's skeleton.
     /// </remarks>
-    public void Prune()
+    public void Patch()
     {
+        const float minDuration = 1f / 30;
+        var duration = minDuration;
         foreach (var track in RootBoneTrack.TraverseDepthFirstParentReverse())
         {
             for (int i = track.Children.Count - 1; i >= 0; i--)
@@ -160,27 +163,47 @@ public class BhaFile
                 var child = track.Children[i];
                 if (child.Keys.Count > 0)
                 {
+                    duration = Math.Max(duration, child.Keys.Sum(x => x.Time));
                     continue;
                 }
 
-                if (child.Children.Count > 0 || i < track.Children.Count - 1)
+                if (child.Children.Count <= 0 && i >= track.Children.Count - 1)
                 {
-                    // Add dummy key since game crashes on tracks with no keys
-                    // Don't delete since this track has children with keys
-                    // Or it's not the last child, so we must keep it to preserve order
-                    child.Keys.Add(new BhaBoneTrackKey { Time = 1f / 30 });
-                }
-                else
-                {
+                    // Delete since this track has no children with keys
+                    // And it's the last child, so order will be preserved
                     track.Children.Remove(child);
                 }
             }
         }
-        
-        // Assuming we can't remove root no matter what
-        if (RootBoneTrack.Keys.Count <= 0)
+
+        var rootDuration = RootBoneTrack.Keys.Sum(x => x.Time);
+        duration = Math.Max(duration, rootDuration);
+        foreach (var track in RootBoneTrack.TraverseDepthFirst())
         {
-            RootBoneTrack.Keys.Add(new BhaBoneTrackKey { Time = 1f / 30 });
+            FixKeys(track, duration);
+        }
+
+        return;
+
+        static void FixKeys(BhaBoneTrack track, float duration)
+        {
+            // Add dummy keys since game crashes on tracks with no keys
+            // Be extra safe by making sure at least 2 keys are present, and the sum is equal to duration
+            // 2 keys is a requirement for root, others require only 1
+            if (track.Keys.Count <= 0)
+            {
+                track.Keys.Add(new BhaBoneTrackKey { Time = duration - minDuration });
+                track.Keys.Add(new BhaBoneTrackKey { Time = minDuration });
+            }
+            else
+            {
+                var current = track.Keys.Sum(x => x.Time);
+                var remaining = duration - current;
+                if (remaining >= minDuration || track.Keys.Count == 1)
+                {
+                    track.Keys.Add(new BhaBoneTrackKey() { Time = remaining });
+                }
+            }
         }
     }
 }
