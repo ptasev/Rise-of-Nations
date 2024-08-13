@@ -58,8 +58,8 @@ public class Bh3File
         {
             case 0:
             {
-                // Root container
-                Debug.Assert(childCount == 2);
+                // Root container. Some have two pairs of mesh/skeleton, I believe by mistake
+                Debug.Assert(childCount == 2, "childCount == 2");
                 ReadChunk(reader, 1);
                 RootBone = ReadBone(reader);
                 break;
@@ -67,7 +67,7 @@ public class Bh3File
             case 1:
             {
                 // Mesh data container
-                Debug.Assert(childCount == 4);
+                Debug.Assert(childCount == 4, "childCount == 4");
                 ReadChunk(reader, 2);
                 ReadChunk(reader, 3);
                 ReadChunk(reader, 4);
@@ -76,7 +76,7 @@ public class Bh3File
             }
             case 2:
             {
-                Debug.Assert(childCount == 0);
+                Debug.Assert(childCount == 0, "childCount == 0");
                 var numElements = reader.ReadInt32();
                 Positions.Capacity = numElements;
                 for (var i = 0; i < numElements; ++i)
@@ -88,7 +88,7 @@ public class Bh3File
             }
             case 3:
             {
-                Debug.Assert(childCount == 0);
+                Debug.Assert(childCount == 0, "childCount == 0");
                 var numElements = reader.ReadInt32();
                 Normals.Capacity = numElements;
                 for (var i = 0; i < numElements; ++i)
@@ -103,7 +103,7 @@ public class Bh3File
             }
             case 4:
             {
-                Debug.Assert(childCount == 0);
+                Debug.Assert(childCount == 0, "childCount == 0");
                 var numElements = reader.ReadInt32();
                 TextureCoordinates.Capacity = numElements;
                 for (var i = 0; i < numElements; ++i)
@@ -115,7 +115,7 @@ public class Bh3File
             }
             case 5:
             {
-                Debug.Assert(childCount == 0);
+                Debug.Assert(childCount == 0, "childCount == 0");
                 var numElements = reader.ReadInt32();
                 Indices.Capacity = numElements;
                 for (var i = 0; i < numElements; ++i)
@@ -133,7 +133,7 @@ public class Bh3File
     private static Bh3Bone ReadBone(BinaryReader reader)
     {
         var (_, _, childCount) = reader.ReadChunkHeader(6);
-        Debug.Assert(childCount >= 1);
+        Debug.Assert(childCount >= 1, "childCount >= 1");
         var bone = ReadBoneData(reader);
 
         for (var i = 1; i < childCount; ++i)
@@ -148,7 +148,7 @@ public class Bh3File
     private static Bh3Bone ReadBoneData(BinaryReader reader)
     {
         var (_, _, childCount) = reader.ReadChunkHeader(7);
-        Debug.Assert(childCount == 0);
+        Debug.Assert(childCount == 0, "childCount == 0");
 
         var bone = new Bh3Bone
         {
@@ -158,7 +158,8 @@ public class Bh3File
             Rotation = reader.ReadQuaternion(),
             Translation = reader.ReadVector3()
         };
-        reader.ReadSingle(); // == Rotation.X
+        var xRot = reader.ReadSingle();
+        Debug.Assert(xRot == bone.Rotation.X, "xRot == bone.Rotation.X");
         return bone;
     }
 

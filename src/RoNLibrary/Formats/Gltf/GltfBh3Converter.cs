@@ -91,7 +91,7 @@ public class GltfBh3Converter
         return (bh3, bha);
     }
 
-    private record BoneData(Bh3Bone Bone, BhaBoneTrack? BoneTrack, List<int> VertexIndices);
+    private record BoneData(Bh3Bone Bone, BhaBoneTrack? BoneTrack, List<int> VertexIndices, Vector3 Scale);
     private static void ConvertSkeleton(Bh3File bh3, BhaFile? bha, IEnumerable<Node> nodes,
         Dictionary<int, BoneData> nodeBoneIndexMap, IReadOnlySet<int> skippedParentIndices)
     {
@@ -101,20 +101,18 @@ public class GltfBh3Converter
             bha.RootBoneTrack = new BhaBoneTrack();
         }
 
-        nodeBoneIndexMap.Add(-1, new BoneData(bh3.RootBone, bha?.RootBoneTrack, []));
+        nodeBoneIndexMap.Add(-1, new BoneData(bh3.RootBone, bha?.RootBoneTrack, [], Vector3.One));
 
         foreach (var node in nodes)
         {
             var bone = new Bh3Bone { Name = node.Name ?? $"node{node.LogicalIndex}" };
             BhaBoneTrack? boneTrack = null;
 
-            var scaleTest = Vector3.Abs(node.LocalTransform.Scale - Vector3.One);
-            if (scaleTest.X > 0.001 || scaleTest.Y > 0.001 || scaleTest.Z > 0.001)
-            {
-                throw new InvalidDataException($"Node ({node.Name}) must not be scaled.");
-            }
-
             var isRoot = node.VisualParent is null || skippedParentIndices.Contains(node.VisualParent.LogicalIndex);
+            var parentIndex = isRoot ? -1 : (node.VisualParent?.LogicalIndex ?? -1);
+            var parentMap = nodeBoneIndexMap[parentIndex];
+            var scale = parentMap.Scale;
+
             if (isRoot)
             {
                 // Rotate root to adjust for difference of world space
@@ -123,12 +121,13 @@ public class GltfBh3Converter
             }
             else
             {
-                bone.Translation = node.LocalTransform.Translation;
+                // BH3 doesn't support scale, bake it in
+                var parentNode = node.LogicalParent.LogicalNodes[parentIndex];
+                scale *= parentNode.LocalTransform.Scale;
+                bone.Translation = node.LocalTransform.Translation * scale;
                 bone.Rotation = Quaternion.Inverse(node.LocalTransform.Rotation);
             }
 
-            var parentIndex = isRoot ? -1 : (node.VisualParent?.LogicalIndex ?? -1);
-            var parentMap = nodeBoneIndexMap[parentIndex];
             parentMap.Bone.Children.Add(bone);
             if (bha is not null)
             {
@@ -136,7 +135,7 @@ public class GltfBh3Converter
                 parentMap.BoneTrack?.Children.Add(boneTrack);
             }
 
-            nodeBoneIndexMap.Add(node.LogicalIndex, new BoneData(bone, boneTrack, []));
+            nodeBoneIndexMap.Add(node.LogicalIndex, new BoneData(bone, boneTrack, [], scale));
         }
 
         // Remove custom root if it only has one child
@@ -226,9 +225,14 @@ public class GltfBh3Converter
         for (int i = 0; i < skinTransforms.Length; ++i)
         {
             var skinJoint = meshNode.Skin.GetJoint(i);
-            skinTransforms[i] = skinJoint.InverseBindMatrix;
             
-            if (!Matrix4x4.Invert(skinJoint.InverseBindMatrix, out var inverse))
+            // BH3 doesn't support scale, bake it in
+            var scale = nodeBoneIndexMap[skinJoint.Joint.LogicalIndex].Scale;
+            var skinTransform = skinJoint.InverseBindMatrix *
+                                Matrix4x4.CreateScale(scale);
+            skinTransforms[i] = skinTransform;
+            
+            if (!Matrix4x4.Invert(skinTransform, out var inverse))
             {
                 throw new InvalidDataException(
                     $"Inverse bind matrix of node {skinJoint.Joint.Name} could not be inverted.");
@@ -360,25 +364,49 @@ public class GltfBh3Converter
                 : (rotationSampler.InterpolationMode == AnimationInterpolationMode.CUBICSPLINE
                     ? rotationSampler.GetCubicKeys().Select(x => x.Key)
                     : rotationSampler.GetLinearKeys().Select(x => x.Key));
+            
+            var scaleSampler = gltfAnim.FindScaleChannel(node)?.GetScaleSampler();
+            var scaleTimes = scaleSampler is null
+                ? []
+                : (scaleSampler.InterpolationMode == AnimationInterpolationMode.CUBICSPLINE
+                    ? scaleSampler.GetCubicKeys().Select(x => x.Key)
+                    : scaleSampler.GetLinearKeys().Select(x => x.Key));
 
             var prevTime = 0f;
-            var basePos = node.LocalTransform.Translation;
+            var basePos = node.LocalTransform.Translation * pair.Value.Scale;
             var baseRotInv = Quaternion.Inverse(node.LocalTransform.Rotation);
-            var times = translationTimes.Concat(rotationTimes).Distinct().Order();
+            var times = translationTimes.Concat(rotationTimes).Concat(scaleTimes).Distinct().Order();
             foreach (var time in times)
             {
                 var key = new BhaBoneTrackKey { Time = time - prevTime };
                 prevTime = time;
 
+                // BH3 doesn't support scale, bake it in
                 key.Translation = translationCurve is null
                     ? Vector3.Zero
-                    : Vector3.Transform(translationCurve.GetPoint(time) - basePos, baseRotInv);
+                    : Vector3.Transform(translationCurve.GetPoint(time) * GetScale(node, time) - basePos, baseRotInv);
 
                 key.Rotation = rotationCurve is null
                     ? Quaternion.Identity
                     : Quaternion.Inverse(Quaternion.Concatenate(rotationCurve.GetPoint(time), baseRotInv));
                 boneTrack.Keys.Add(key);
             }
+        }
+
+        Vector3 GetScale(Node node, float time)
+        {
+            // Loop through all parents that are getting exported and calculate the scale at time
+            var scale = Vector3.One;
+            var parent = node.VisualParent;
+            while (parent is not null && nodeBoneIndexMap.ContainsKey(parent.LogicalIndex))
+            {
+                var scaleSampler = gltfAnim.FindScaleChannel(parent)?.GetScaleSampler();
+                var scaleCurve = scaleSampler?.CreateCurveSampler();
+                scale *= scaleCurve?.GetPoint(time) ?? parent.LocalTransform.Scale;
+                parent = parent.VisualParent;
+            }
+
+            return scale;
         }
     }
 

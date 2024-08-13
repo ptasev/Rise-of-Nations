@@ -35,8 +35,8 @@ public class BhaFile
         {
             case 0:
             {
-                // Root container
-                Debug.Assert(childCount == 1);
+                // Root container. Some have multiple roots, I believe by mistake
+                Debug.Assert(childCount == 1, "childCount == 1");
                 RootBoneTrack = ReadBoneTrack(reader);
                 break;
             }
@@ -48,7 +48,7 @@ public class BhaFile
     private static BhaBoneTrack ReadBoneTrack(BinaryReader reader)
     {
         var (_, _, childCount) = reader.ReadChunkHeader(8);
-        Debug.Assert(childCount >= 1);
+        Debug.Assert(childCount >= 1, "childCount >= 1");
         var boneTrack = new BhaBoneTrack
         {
             Keys = ReadBoneTrackKeys(reader)
@@ -66,19 +66,21 @@ public class BhaFile
     private static List<BhaBoneTrackKey> ReadBoneTrackKeys(BinaryReader reader)
     {
         var (_, _, childCount) = reader.ReadChunkHeader(7);
-        Debug.Assert(childCount == 0);
+        Debug.Assert(childCount == 0, "childCount == 0");
 
         var keyCount = reader.ReadInt32();
         var keys = new List<BhaBoneTrackKey>(keyCount);
         for (var i = 0; i < keyCount; ++i)
         {
-            keys.Add(new BhaBoneTrackKey
+            var key = new BhaBoneTrackKey
             {
                 Time = reader.ReadSingle(),
                 Rotation = reader.ReadQuaternion(),
                 Translation = reader.ReadVector3()
-            });
-            reader.ReadSingle(); // == Rotation.X
+            };
+            keys.Add(key);
+            var xRot = reader.ReadSingle();
+            Debug.Assert(xRot == key.Rotation.X, "xRot == key.Rotation.X");
         }
 
         return keys;
