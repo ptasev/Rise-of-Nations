@@ -42,7 +42,7 @@ internal class Commands(Bh3GltfConverter bh3GltfConverter, GltfBh3Converter gltf
     /// <param name="outputFilePath">-o, The output file path.</param>
     public void Bh3([Argument] string filePath, string? animFilePath = null, string? outputFilePath = null)
     {
-        logger.LogInformation("Converting bh3 to glTF...");
+        logger.LogInformation("Converting bh3 to glTF {FileName}...", Path.GetFileName(filePath));
         var bh3 = Bh3File.Open(filePath);
         var bha = animFilePath is not null ? BhaFile.Open(animFilePath) : null;
 
@@ -73,22 +73,17 @@ internal class Commands(Bh3GltfConverter bh3GltfConverter, GltfBh3Converter gltf
         string? modelOutputFilePath = null,
         string? animOutputFilePath = null)
     {
-        logger.LogInformation("Converting glTF to bh3/bha...");
+        logger.LogInformation("Converting glTF to bh3/bha {FileName}...", Path.GetFileName(filePath));
         var gltf = ModelRoot.Load(filePath);
 
         var sceneIndex = gltf.LogicalScenes.FirstOrDefault(x =>
-            string.Equals(x.Name, sceneNameOrIndex, StringComparison.OrdinalIgnoreCase))?.LogicalIndex ?? -1;
-        if (sceneIndex == -1)
-        {
-            int.TryParse(sceneNameOrIndex, out sceneIndex);
-        }
+                string.Equals(x.Name ?? x.LogicalIndex.ToString(), sceneNameOrIndex,
+                    StringComparison.OrdinalIgnoreCase))
+            ?.LogicalIndex ?? -1;
 
         var animIndex = gltf.LogicalAnimations.FirstOrDefault(x =>
-            string.Equals(x.Name, animNameOrIndex, StringComparison.OrdinalIgnoreCase))?.LogicalIndex ?? -1;
-        if (animIndex == -1)
-        {
-            int.TryParse(animNameOrIndex, out animIndex);
-        }
+                string.Equals(x.Name ?? x.LogicalIndex.ToString(), animNameOrIndex, StringComparison.OrdinalIgnoreCase))
+            ?.LogicalIndex ?? -1;
 
         var parameters = new GltfBh3Parameters
         {
